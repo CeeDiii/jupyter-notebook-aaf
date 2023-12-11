@@ -4,3 +4,10 @@
 
 azure-functions
 azure-functions-durable
+ipykernel
+numpy
+pandas
+papermill
+pyodbc
+python-dotenv
+sqlalchemy
