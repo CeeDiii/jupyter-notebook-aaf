@@ -17,15 +17,33 @@ app = df.DFApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
 # An HTTP-Triggered Function with a Durable Functions Client binding
-@app.route(route="orchestrators/{functionName}/{notebookPath}", methods=["POST"])
+@app.route(
+    route="orchestrators/{functionName}/notebook_path/{notebookPath}", methods=["POST"]
+)
 @app.durable_client_input(client_name="client")
 async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClient):
-    # TODO check if route params exist
     function_name = req.route_params.get("functionName")
+    if function_name is None:
+        return func.HttpResponse(
+            status_code=400, body="Function name is missing in request URL."
+        )
     notebook_path = req.route_params.get("notebookPath")
-    # TODO check if data param is populated in req body
-    req_body = json.loads(req.get_json())
-    data = req_body.get("data")
+    logging.debug("Notebook path %s", notebook_path)
+    if notebook_path is None:
+        return func.HttpResponse(
+            status_code=400,
+            body="Please specify the blob storage path from where you want to run your notebook, e.g. notebook_path=my-folder. The folder has to be a subdirectory of /jupyter-notebooks.",
+        )
+    try:
+        req_body = json.loads(req.get_json())
+        data = req_body.get("data")
+        logging.debug("data:\n\n%s", json.dumps(data, indent=4))
+    except ValueError as err:
+        return func.HttpResponse(
+            status_code=400,
+            body="Invalid body. Body could not be parsed to json. Make sure the json object contains a 'data' property.",
+        )
+
     instance_id = await client.start_new(
         function_name,
         client_input=json.dumps(
@@ -39,22 +57,28 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
 # Orchestrator
 @app.orchestration_trigger(context_name="context")
 def notebook_orchestrator(context: df.DurableOrchestrationContext):
-    # TODO check input
-    client_input = json.loads(context.get_input())
+    json_input = context.get_input()
+    logging.debug("orchestrator context input\n\n%s", json_input)
+    if json_input is None:
+        raise ValueError("The orchestrator expects a notebook path and data as input.")
+    client_input = json.loads(json_input)
+    if "notebook_path" not in client_input or "data" not in client_input:
+        raise KeyError(f"Expected notebook_path and data, got {json_input}")
     notebook_path = client_input["notebook_path"]
     data = client_input["data"]
-    notebooks = yield context.call_activity(
-        "get_notebooks_from_blob_path", notebook_path
-    )
 
-    output = yield context.call_activity(
-        "execute_notebooks",
-        {"notebooks": notebooks, "data": json.dumps(data, indent=4)},
-    )
-    result_value = yield context.call_activity(
-        "get_result_value", json.dumps(output, indent=4)
-    )
-    return [result_value]
+    nbs = yield context.call_activity("get_notebooks_from_blob_path", notebook_path)
+
+    notebooks = json.loads(nbs)
+    results = []
+    for notebook in notebooks:
+        output = yield context.call_activity(
+            "execute_notebooks",
+            {"notebook": notebook, "data": json.dumps(data, indent=4)},
+        )
+        result_value = yield context.call_activity("get_result_value", output)
+        results.append(result_value)
+    return results
 
 
 @app.activity_trigger(input_name="path")
@@ -74,32 +98,38 @@ def get_notebooks_from_blob_path(path: str):
 
 
 class ExecuteParams(TypedDict):
-    notebooks: str
+    notebook: str
     data: str
 
 
 @app.activity_trigger(input_name="params")
 def execute_notebooks(params: ExecuteParams):
-    notebooks = json.loads(params["notebooks"])
-    data = json.loads(params["data"])
-    for notebook in notebooks:
-        nb = json.loads(notebook)
-        filename = ""
-        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-            json.dump(nb, f)
-            filename = f.name
-        returned_notebook = pm.execute_notebook(
-            input_path=filename,
-            output_path=None,
-            parameters={"params": json.dumps({"data": data}, indent=4)},
-            kernel_name="python3",
-        )
-        return returned_notebook
+    json_notebook = params.get("notebook")
+    json_data = params.get("data")
+    if json_notebook is None or json_data is None:
+        raise KeyError(f"Expected notebook and data, got {params}")
+    notebook = json.loads(json_notebook)
+    data = json.loads(json_data)
+    logging.debug("notebook input\n\n%s", json.dumps(notebook, indent=4))
+    logging.debug("data input\n\n%s", json.dumps(data, indent=4))
+
+    filename = ""
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(notebook, f)
+        filename = f.name
+    notebook_output = pm.execute_notebook(
+        input_path=filename,
+        output_path=None,
+        parameters={"params": json.dumps({"data": data}, indent=4)},
+        kernel_name="python3",
+    )
+    logging.debug("notebook output\n\n%s", notebook_output)
+    return notebook_output
 
 
 @app.activity_trigger(input_name="nboutput")
-def get_result_value(nboutput: str):
-    data = json.loads(nboutput)
+def get_result_value(nboutput: dict):
+    data = nboutput
     cells = data["cells"]
 
     def filter_by_result_value_tag(cell):
@@ -109,4 +139,5 @@ def get_result_value(nboutput: str):
 
     # there should always be exactly one value
     result_value = list(filter(filter_by_result_value_tag, cells))[0]
+    logging.debug("notebook return value\n\n%", json.dumps(result_value, indent=4))
     return result_value

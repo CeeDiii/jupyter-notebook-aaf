@@ -191,7 +191,7 @@ def get_status(status_uri: str):
             with open("output.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
         else:
-            print("Waiting...")
+            print(f"{data['runtimeStatus']}...")
             time.sleep(1)
             return get_status(status_uri)
     else:
@@ -199,10 +199,12 @@ def get_status(status_uri: str):
 
 
 res = requests.post(
-    "http://localhost:7071/api/orchestrators/notebook_orchestrator/test",
+    "http://localhost:7071/api/orchestrators/notebook_orchestrator/notebook_path/test",
     json=json.dumps({"data": {"sales_transactions": dummy_data}}),
     timeout=30,
 )
 if res.ok:
     data = res.json()
     get_status(status_uri=data["statusQueryGetUri"])
+else:
+    raise requests.HTTPError(response=res)
