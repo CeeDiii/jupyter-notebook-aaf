@@ -4,6 +4,7 @@
 
 azure-functions
 azure-functions-durable
+azure-storage-blob 
 ipykernel
 numpy
 pandas
