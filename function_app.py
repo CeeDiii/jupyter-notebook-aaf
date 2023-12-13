@@ -9,11 +9,7 @@ import azure.durable_functions as df
 from azure.storage.blob import BlobServiceClient
 import papermill as pm
 
-app = df.DFApp(http_auth_level=func.AuthLevel.ANONYMOUS)
-
-
-# TODO create a single generic endpoint that takes the Blob path name as a parameter and executes all notebooks in this path and returns all results
-# TODO check if we can fetch data in ADF and use them as json in request
+app = df.DFApp(http_auth_level=func.AuthLevel.FUNCTION)
 
 
 # An HTTP-Triggered Function with a Durable Functions Client binding
@@ -34,11 +30,14 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
             status_code=400,
             body="Please specify the blob storage path from where you want to run your notebook, e.g. notebook_path=my-folder. The folder has to be a subdirectory of /jupyter-notebooks.",
         )
+    notebook_name = req.params.get("notebook_name")
+    if notebook_name is not None:
+        notebook_path += notebook_name
     try:
         req_body = json.loads(req.get_json())
         data = req_body.get("data")
         logging.debug("data:\n\n%s", json.dumps(data, indent=4))
-    except ValueError as err:
+    except ValueError:
         return func.HttpResponse(
             status_code=400,
             body="Invalid body. Body could not be parsed to json. Make sure the json object contains a 'data' property.",
@@ -55,7 +54,7 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
 
 
 # Orchestrator
-@app.orchestration_trigger(context_name="context")
+@app.orchestration_trigger(context_name="context", orchestration="execute_notebook")
 def notebook_orchestrator(context: df.DurableOrchestrationContext):
     json_input = context.get_input()
     logging.debug("orchestrator context input\n\n%s", json_input)
@@ -139,5 +138,5 @@ def get_result_value(nboutput: dict):
 
     # there should always be exactly one value
     result_value = list(filter(filter_by_result_value_tag, cells))[0]
-    logging.debug("notebook return value\n\n%", json.dumps(result_value, indent=4))
+    logging.debug("notebook return value\n\n%s", json.dumps(result_value, indent=4))
     return result_value
