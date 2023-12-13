@@ -32,7 +32,7 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
         )
     notebook_name = req.params.get("notebook_name")
     if notebook_name is not None:
-        notebook_path += notebook_name
+        notebook_path += f"/{notebook_name}"
     try:
         req_body = json.loads(req.get_json())
         data = req_body.get("data")
