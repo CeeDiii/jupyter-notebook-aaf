@@ -1,6 +1,11 @@
 import json
+import os
 import time
+
+from dotenv import load_dotenv
 import requests
+
+load_dotenv()
 
 dummy_data = [
     {
@@ -198,9 +203,13 @@ def get_status(status_uri: str):
         raise requests.HTTPError(response=res)
 
 
+DEV_PATH = "http://localhost:7071/api/orchestrators/execute_notebook/notebook_path/test?notebook_name=test.ipynb"
+PROD_PATH = "https://jupyter-notebook-as-a-function.azurewebsites.net/api/orchestrators/execute_notebook/notebook_path/test?notebook_name=test.ipynb"
+
 res = requests.post(
-    "http://localhost:7071/api/orchestrators/notebook_orchestrator/notebook_path/test",
+    DEV_PATH,
     json=json.dumps({"data": {"sales_transactions": dummy_data}}),
+    headers={"x-functions-key": os.environ["FUNCTION_KEY"]},
     timeout=30,
 )
 if res.ok:
