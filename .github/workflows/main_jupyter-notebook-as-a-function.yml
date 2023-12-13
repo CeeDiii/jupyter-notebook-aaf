@@ -8,6 +8,10 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - examples/**
+      - .gitignore
+      - .vscode/**
   workflow_dispatch:
 
 env:
