@@ -144,7 +144,7 @@ def get_result_value(nboutput: dict):
     return result_value
 
 
-@app.route("available_kernel", methods=["GET"], auth_level="ADMIN")
+@app.route("available_kernel", methods=["GET"], auth_level=func.AuthLevel.ADMIN)
 def get_available_kernel(req: func.HttpRequest):
     import subprocess
 
