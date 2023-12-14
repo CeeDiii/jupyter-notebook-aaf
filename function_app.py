@@ -1,12 +1,12 @@
 import logging
 import json
 import os
-import tempfile
 from typing import TypedDict
 
 import azure.functions as func
 import azure.durable_functions as df
 from azure.storage.blob import BlobServiceClient
+import nbformat
 import papermill as pm
 
 app = df.DFApp(http_auth_level=func.AuthLevel.FUNCTION)
@@ -103,21 +103,16 @@ class ExecuteParams(TypedDict):
 
 @app.activity_trigger(input_name="params")
 def execute_notebooks(params: ExecuteParams):
-    json_notebook = params.get("notebook")
+    jupyter_node_as_str = params.get("notebook")
     json_data = params.get("data")
-    if json_notebook is None or json_data is None:
+    if jupyter_node_as_str is None or json_data is None:
         raise KeyError(f"Expected notebook and data, got {params}")
-    notebook = json.loads(json_notebook)
+    notebook = nbformat.reads(jupyter_node_as_str, as_version=nbformat.current_nbformat)
     data = json.loads(json_data)
     logging.debug("notebook input\n\n%s", json.dumps(notebook, indent=4))
     logging.debug("data input\n\n%s", json.dumps(data, indent=4))
-
-    filename = ""
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump(notebook, f)
-        filename = f.name
     notebook_output = pm.execute_notebook(
-        input_path=filename,
+        input_path=notebook,
         output_path=None,
         parameters={"params": json.dumps({"data": data}, indent=4)},
         kernel_name="python3",
