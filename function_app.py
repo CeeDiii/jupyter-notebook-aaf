@@ -120,9 +120,7 @@ def execute_notebooks(params: ExecuteParams):
         input_path=filename,
         output_path=None,
         parameters={"params": json.dumps({"data": data}, indent=4)},
-        kernel_name="python3"
-        if os.environ.get("ENV_MODE") == "dev"
-        else "jupyter-dolder",
+        kernel_name="python3",
     )
     logging.debug("notebook output\n\n%s", notebook_output)
     return notebook_output
