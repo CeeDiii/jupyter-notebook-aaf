@@ -39,7 +39,7 @@ jobs:
               run: pip install -r requirements.txt
 
             - name: Install Jupyter Kernel
-              run: jupyter kernelspec install --user --name jupyter-dolder
+              run: python -m ipykernel install --user --name venv
 
             # Optional: Add step to run tests here
 
