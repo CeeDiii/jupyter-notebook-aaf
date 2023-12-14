@@ -115,7 +115,7 @@ def execute_notebooks(params: ExecuteParams):
         input_path=notebook,
         output_path=None,
         parameters={"params": json.dumps({"data": data}, indent=4)},
-        kernel_name="python3",
+        kernel_name=None,  # kernelspec is defined in notebook metadata
     )
     logging.debug("notebook output\n\n%s", notebook_output)
     return notebook_output
