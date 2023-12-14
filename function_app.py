@@ -142,3 +142,12 @@ def get_result_value(nboutput: dict):
     result_value = list(filter(filter_by_result_value_tag, cells))[0]
     logging.debug("notebook return value\n\n%s", json.dumps(result_value, indent=4))
     return result_value
+
+
+@app.route("available_kernel", methods=["GET"], auth_level="ADMIN")
+def get_available_kernel(req: func.HttpRequest):
+    import subprocess
+
+    kernels = subprocess.check_output(["jupyter", "kernelspec", "list"])
+    logging.info("Available kernels %s", kernels)
+    return func.HttpResponse(status_code=200, body=kernels)
