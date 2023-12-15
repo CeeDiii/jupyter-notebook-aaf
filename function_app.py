@@ -13,9 +13,7 @@ app = df.DFApp(http_auth_level=func.AuthLevel.FUNCTION)
 
 
 # An HTTP-Triggered Function with a Durable Functions Client binding
-@app.route(
-    route="orchestrators/{functionName}/notebook_path/{notebookPath}", methods=["POST"]
-)
+@app.route(route="orchestrators/{functionName}", methods=["POST"])
 @app.durable_client_input(client_name="client")
 async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClient):
     function_name = req.route_params.get("functionName")
@@ -23,16 +21,14 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
         return func.HttpResponse(
             status_code=400, body="Function name is missing in request URL."
         )
-    notebook_path = req.route_params.get("notebookPath")
+
+    notebook_path = req.params.get("notebook_path")
     logging.debug("Notebook path %s", notebook_path)
     if notebook_path is None:
         return func.HttpResponse(
             status_code=400,
-            body="Please specify the blob storage path from where you want to run your notebook, e.g. notebook_path=my-folder. The folder has to be a subdirectory of /jupyter-notebooks.",
+            body="Please specify the blob storage path to the notebook that you want to run, e.g. notebook_path?my-folder/test.ipynb. The file has to be in the Blob storage container /jupyter-notebooks.",
         )
-    notebook_name = req.params.get("notebook_name")
-    if notebook_name is not None:
-        notebook_path += f"/{notebook_name}"
     try:
         req_body = req.get_json()
         data = req_body.get("data")
@@ -66,34 +62,31 @@ def notebook_orchestrator(context: df.DurableOrchestrationContext):
     notebook_path = client_input["notebook_path"]
     data = client_input["data"]
 
-    nbs = yield context.call_activity("get_notebooks_from_blob_path", notebook_path)
-
-    notebooks = json.loads(nbs)
-    results = []
-    for notebook in notebooks:
-        output = yield context.call_activity(
-            "execute_notebooks",
-            {"notebook": notebook, "data": json.dumps(data, indent=4)},
-        )
-        result_value = yield context.call_activity("get_result_value", output)
-        results.append(result_value)
-    return results
+    notebook = yield context.call_activity("get_notebook_from_blob_path", notebook_path)
+    output = yield context.call_activity(
+        "execute_notebook",
+        {"notebook": notebook, "data": json.dumps(data, indent=4)},
+    )
+    result_value = yield context.call_activity("get_result_value", output)
+    return result_value
 
 
 @app.activity_trigger(input_name="path")
-def get_notebooks_from_blob_path(path: str):
+def get_notebook_from_blob_path(path: str):
     connection_string = os.environ["BLOB_CONNECTION_STRING"]
     blob_service_client = BlobServiceClient.from_connection_string(connection_string)
     container_client = blob_service_client.get_container_client("jupyter-notebooks")
 
-    notebooks = []
-    blob_list = container_client.list_blobs()
-    for blob in blob_list:
-        if blob.name.startswith(path):
-            data = container_client.download_blob(blob.name).readall()
-            notebooks.append(data.decode("utf-8"))
-
-    return json.dumps(notebooks, indent=4)
+    blob_list = container_client.list_blobs(name_starts_with=path)
+    logging.info("blob list: %s", blob_list)
+    try:
+        blob = blob_list.next()
+        logging.info("blob name: %s", blob.name)
+    except:
+        raise ValueError(f"Blob {path} does not exist.")
+    data = container_client.download_blob(blob.name).readall()
+    notebook = data.decode("utf-8")
+    return notebook
 
 
 class ExecuteParams(TypedDict):
@@ -102,7 +95,7 @@ class ExecuteParams(TypedDict):
 
 
 @app.activity_trigger(input_name="params")
-def execute_notebooks(params: ExecuteParams):
+def execute_notebook(params: ExecuteParams):
     jupyter_node_as_str = params.get("notebook")
     json_data = params.get("data")
     if jupyter_node_as_str is None or json_data is None:
@@ -133,11 +126,13 @@ def get_result_value(nboutput: dict):
 
     def extract_result_value(cell):
         output = cell["outputs"][0]  # we only extract the first output
-        data = output["data"]["text/plain"]
-        return data
+        data = output["data"]["text/plain"].replace(
+            "'", ""
+        )  # the result value is wrapped in single quotes
+        return json.loads(data)
 
     # there should always be exactly one value
     papermill_result_cell = list(filter(filter_by_result_value_tag, cells))[0]
     result_value = extract_result_value(papermill_result_cell)
-    logging.debug("notebook return value\n\n%s", json.dumps(result_value, indent=4))
+    logging.info("notebook return value\n\n%s", json.dumps(result_value, indent=4))
     return result_value
