@@ -34,7 +34,7 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
     if notebook_name is not None:
         notebook_path += f"/{notebook_name}"
     try:
-        req_body = json.loads(req.get_json())
+        req_body = req.get_json()
         data = req_body.get("data")
         logging.debug("data:\n\n%s", json.dumps(data, indent=4))
     except ValueError:
