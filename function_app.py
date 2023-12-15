@@ -131,16 +131,13 @@ def get_result_value(nboutput: dict):
         tags = metadata["tags"]
         return len(tags) > 0 and "return_value" in tags
 
+    def extract_result_value(cell):
+        output = cell["outputs"][0]  # we only extract the first output
+        data = output["data"]["text/plain"]
+        return data
+
     # there should always be exactly one value
-    result_value = list(filter(filter_by_result_value_tag, cells))[0]
+    papermill_result_cell = list(filter(filter_by_result_value_tag, cells))[0]
+    result_value = extract_result_value(papermill_result_cell)
     logging.debug("notebook return value\n\n%s", json.dumps(result_value, indent=4))
     return result_value
-
-
-@app.route("available_kernel", methods=["GET"], auth_level=func.AuthLevel.ADMIN)
-def get_available_kernel(req: func.HttpRequest):
-    import subprocess
-
-    kernels = subprocess.check_output(["jupyter", "kernelspec", "list"])
-    logging.info("Available kernels %s", kernels)
-    return func.HttpResponse(status_code=200, body=kernels)
