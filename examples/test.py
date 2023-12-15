@@ -127,7 +127,7 @@ dummy_data = [
         "SourceType": "Stock",
         "SalesType": "Sales",
         "DocumentType": "Sales Invoice",
-        "PostingDate": "2019-01-09T00:00:00Z",
+        "PostingDate": "2019-03-09T00:00:00Z",
         "LocationCode": "?",
         "CustomerID": "bin-9686",
         "ProductID": "bin-PA6-6B30300",
@@ -149,7 +149,7 @@ dummy_data = [
         "SourceType": "Stock",
         "SalesType": "Sales",
         "DocumentType": "Sales Invoice",
-        "PostingDate": "2019-01-09T00:00:00Z",
+        "PostingDate": "2019-04-09T00:00:00Z",
         "LocationCode": "?",
         "CustomerID": "bin-9686",
         "ProductID": "bin-PA6-6G30300",
@@ -203,12 +203,12 @@ def get_status(status_uri: str):
         raise requests.HTTPError(response=res)
 
 
-DEV_PATH = "http://localhost:7071/api/orchestrators/execute_notebook/notebook_path/test?notebook_name=test.ipynb"
-PROD_PATH = "https://jupyter-notebook-as-a-function.azurewebsites.net/api/orchestrators/execute_notebook/notebook_path/test?notebook_name=test.ipynb"
+DEV_PATH = "http://localhost:7071/api/orchestrators/execute_notebook?notebook_path=test/test.ipynb"
+PROD_PATH = "https://jupyter-notebook-as-a-function.azurewebsites.net/api/orchestrators/execute_notebook?notebook_path=test/test.ipynb"
 
 res = requests.post(
     DEV_PATH,
-    json=json.dumps({"data": {"sales_transactions": dummy_data}}),
+    json={"data": {"sales_transactions": dummy_data}},
     headers={"x-functions-key": os.environ["FUNCTION_KEY"]},
     timeout=30,
 )
