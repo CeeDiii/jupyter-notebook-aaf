@@ -31,8 +31,8 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
         )
     try:
         req_body = req.get_json()
-        data = req_body.get("data")
-        logging.debug("data:\n\n%s", json.dumps(data, indent=4))
+        write_to_sql = req_body.get("write_to_sql")
+        logging.debug("write to sql:\n\n%d", write_to_sql)
     except ValueError:
         return func.HttpResponse(
             status_code=400,
@@ -42,7 +42,7 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
     instance_id = await client.start_new(
         function_name,
         client_input=json.dumps(
-            {"notebook_path": notebook_path, "data": data}, indent=4
+            {"notebook_path": notebook_path, "write_to_sql": write_to_sql}, indent=4
         ),
     )
     response = client.create_check_status_response(req, instance_id)
@@ -55,17 +55,17 @@ def notebook_orchestrator(context: df.DurableOrchestrationContext):
     json_input = context.get_input()
     logging.debug("orchestrator context input\n\n%s", json_input)
     if json_input is None:
-        raise ValueError("The orchestrator expects a notebook path and data as input.")
+        raise ValueError("No input was passed to the orchestrator.")
     client_input = json.loads(json_input)
-    if "notebook_path" not in client_input or "data" not in client_input:
-        raise KeyError(f"Expected notebook_path and data, got {json_input}")
+    if "notebook_path" not in client_input or "write_to_sql" not in client_input:
+        raise KeyError(f"Expected notebook_path and write_to_sql, got {json_input}")
     notebook_path = client_input["notebook_path"]
-    data = client_input["data"]
+    write_to_sql = client_input["write_to_sql"]
 
     notebook = yield context.call_activity("get_notebook_from_blob_path", notebook_path)
     output = yield context.call_activity(
         "execute_notebook",
-        {"notebook": notebook, "data": json.dumps(data, indent=4)},
+        {"notebook": notebook, "write_to_sql": write_to_sql},
     )
     result_value = yield context.call_activity("get_result_value", output)
     return result_value
@@ -91,23 +91,21 @@ def get_notebook_from_blob_path(path: str):
 
 class ExecuteParams(TypedDict):
     notebook: str
-    data: str
+    write_to_sql: bool
 
 
 @app.activity_trigger(input_name="params")
 def execute_notebook(params: ExecuteParams):
     jupyter_node_as_str = params.get("notebook")
-    json_data = params.get("data")
-    if jupyter_node_as_str is None or json_data is None:
-        raise KeyError(f"Expected notebook and data, got {params}")
+    write_to_sql = params.get("write_to_sql")
+    if jupyter_node_as_str is None or write_to_sql is None:
+        raise KeyError(f"Expected notebook and write_to_sql, got {params}")
     notebook = nbformat.reads(jupyter_node_as_str, as_version=nbformat.current_nbformat)
-    data = json.loads(json_data)
     logging.debug("notebook input\n\n%s", json.dumps(notebook, indent=4))
-    logging.debug("data input\n\n%s", json.dumps(data, indent=4))
     notebook_output = pm.execute_notebook(
         input_path=notebook,
         output_path=None,
-        parameters={"params": json.dumps({"data": data}, indent=4)},
+        parameters={"params": {"write_to_sql": write_to_sql}},
         kernel_name=None,  # kernelspec is defined in notebook metadata
     )
     logging.debug("notebook output\n\n%s", notebook_output)
@@ -126,13 +124,11 @@ def get_result_value(nboutput: dict):
 
     def extract_result_value(cell):
         output = cell["outputs"][0]  # we only extract the first output
-        data = output["data"]["text/plain"].replace(
-            "'", ""
-        )  # the result value is wrapped in single quotes
-        return json.loads(data)
+        data = output["data"]["text/plain"]
+        return data
 
     # there should always be exactly one value
     papermill_result_cell = list(filter(filter_by_result_value_tag, cells))[0]
     result_value = extract_result_value(papermill_result_cell)
-    logging.info("notebook return value\n\n%s", json.dumps(result_value, indent=4))
+    logging.debug("notebook return value\n\n%s", json.dumps(result_value, indent=4))
     return result_value
