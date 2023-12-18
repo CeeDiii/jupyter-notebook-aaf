@@ -41,7 +41,7 @@ def main():
     load_dotenv()
 
     base_url = "http://localhost:7071"
-    API_PATH = "/api/orchestrators/execute_notebook?notebook_path=test/test.ipynb"
+    API_PATH = "/api/orchestrators/execute_notebook?notebook_path=example/example.ipynb"
 
     if args["env"] == "prod":
         base_url = "https://jupyter-notebook-as-a-function.azurewebsites.net"
@@ -50,7 +50,17 @@ def main():
 
     res = requests.post(
         request_url,
-        json={"write_to_sql": True},
+        json={
+            "write_to_sql": True,
+            "debug": True,
+            "data": {
+                "super_mario": [
+                    {"name": "Mario", "age": 34},
+                    {"name": "Luigi", "age": 34},
+                ]
+            },
+            "kwargs": {"hello": "world"},
+        },
         headers={"x-functions-key": os.environ["FUNCTION_KEY"]},
         timeout=30,
     )
@@ -58,6 +68,7 @@ def main():
         data = res.json()
         get_status(status_uri=data["statusQueryGetUri"])
     else:
+        print(res.status_code, res.text)
         raise requests.HTTPError(response=res)
 
 
