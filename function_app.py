@@ -222,9 +222,13 @@ def get_result_value(nboutput: str):
         """
         extract the result value from the cell with the 'result_value' tag.
         """
-        output = result_value_cell.outputs[0]  # we only extract the first output
-        data = output.data.text_plain
-        return data
+        outputs = result_value_cell.outputs
+        if outputs is not None and len(outputs) > 0:
+            output = outputs[0]  # we only extract the first output
+            data = output.data.text_plain
+            return data
+        else:
+            return { "message": "No output returned. Check your parameters if you expected a result."}
 
     # there should always be exactly one value
     papermill_result_cell = filter_by_result_value_tag(cells)
