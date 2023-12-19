@@ -37,7 +37,10 @@ def get_status(status_uri: str):
             with open("output.json", "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
         else:
+            os.system("cls" if os.name == "nt" else "clear")
+            print(status_uri)
             print(f"{data['runtimeStatus']}...")
+            print(json.dumps(data, indent=4))
             time.sleep(1)
             return get_status(status_uri)
     else:
