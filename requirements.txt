@@ -4,8 +4,11 @@
 
 azure-functions
 azure-functions-durable
+azure-identity
+azure-keyvault-secrets
 azure-storage-blob 
 ipykernel
+matplotlib
 nbformat
 numpy
 pandas
@@ -13,4 +16,6 @@ papermill
 pydantic
 pyodbc
 python-dotenv
+requests
+seaborn
 sqlalchemy
