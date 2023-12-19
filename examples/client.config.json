@@ -1,0 +1,6 @@
+{
+    "DEV_BASE_URL": "http://localhost:7071",
+    "PROD_BASE_URL": "https://jupyter-notebook-as-a-function.azurewebsites.net",
+    "ORCHESTRATOR_PATH": "/api/orchestrators/execute_notebook?notebook_path=",
+    "NOTEBOOK_PATH": "example/example.ipynb"
+}
