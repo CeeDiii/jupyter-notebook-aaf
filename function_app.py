@@ -69,7 +69,7 @@ async def http_start(req: func.HttpRequest, client: df.DurableOrchestrationClien
         logging.error(err)
         return func.HttpResponse(
             status_code=400,
-            body="Invalid body. Body could not be parsed to json.",
+            body=f"Invalid body. Body could not be parsed to json.\n\n{str(req.get_body(), 'utf-8')}",
         )
 
     notebook_params = FunctionInput(
@@ -228,7 +228,9 @@ def get_result_value(nboutput: str):
             data = output.data.text_plain
             return data
         else:
-            return { "message": "No output returned. Check your parameters if you expected a result."}
+            return {
+                "message": "No output returned. Check your parameters if you expected a result."
+            }
 
     # there should always be exactly one value
     papermill_result_cell = filter_by_result_value_tag(cells)
