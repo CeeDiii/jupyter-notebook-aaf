@@ -1,6 +1,9 @@
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
+from .papermill import PapermillCell, PapermillOutput
+
+
 class NotebookExecutionParams(BaseModel):
     write_to_sql: bool
     debug: bool = False
