@@ -42,6 +42,8 @@ The Jupyter Notebook AAF project provides a serverless solution for executing Ju
 Ensure you have the following dependencies installed on your system:
 
 -   **Python**: `version >3.10.X`
+-   **[Azure CLI](https://learn.microsoft.com/en-us/cli/azure/)**
+-   **[Azurite (Azure Storage Emulator)](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio%2Cblob-storage)**
 
 ### Installation
 
