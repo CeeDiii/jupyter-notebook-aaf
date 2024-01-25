@@ -5,10 +5,10 @@
     <em>Jupyter As Functions: Execute, Automate, Innovate</em>
 </p>
 <p align="center">
-	<img src="https://img.shields.io/github/license/Dolder-AG/jupyter-notebook-aaf?style=default&color=0080ff" alt="license">
-	<img src="https://img.shields.io/github/last-commit/Dolder-AG/jupyter-notebook-aaf?style=default&color=0080ff" alt="last-commit">
-	<img src="https://img.shields.io/github/languages/top/Dolder-AG/jupyter-notebook-aaf?style=default&color=0080ff" alt="repo-top-language">
-	<img src="https://img.shields.io/github/languages/count/Dolder-AG/jupyter-notebook-aaf?style=default&color=0080ff" alt="repo-language-count">
+	<img src="https://img.shields.io/github/license/CeeDiii/jupyter-notebook-aaf?style=default&color=0080ff" alt="license">
+	<img src="https://img.shields.io/github/last-commit/CeeDiii/jupyter-notebook-aaf?style=default&color=0080ff" alt="last-commit">
+	<img src="https://img.shields.io/github/languages/top/CeeDiii/jupyter-notebook-aaf?style=default&color=0080ff" alt="repo-top-language">
+	<img src="https://img.shields.io/github/languages/count/CeeDiii/jupyter-notebook-aaf?style=default&color=0080ff" alt="repo-language-count">
 <p>
 <p align="center">
 	<!-- default option, no dependency badges. -->
