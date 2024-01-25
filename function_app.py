@@ -8,10 +8,13 @@ from azure.storage.blob import BlobServiceClient
 import nbformat
 import papermill as pm
 
-from models import (
+from models.notebook import (
     NotebookExecutionInput,
     NotebookExecutionParams,
     FunctionInput,
+)
+
+from models.papermill import (
     PapermillCell,
     PapermillOutput,
 )
